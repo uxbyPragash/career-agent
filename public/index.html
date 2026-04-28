@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Career AI Agent</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --card: #16161f;
+    --border: #252535;
+    --accent: #7c6dfa;
+    --accent2: #fa6d9a;
+    --accent3: #6dfabc;
+    --text: #e8e8f0;
+    --muted: #6b6b8a;
+    --glow: rgba(124,109,250,0.15);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif; min-height:100vh; }
+  body::before {
+    content:''; position:fixed; inset:0; z-index:0;
+    background: radial-gradient(ellipse 80% 50% at 20% 10%, rgba(124,109,250,0.08) 0%, transparent 60%),
+                radial-gradient(ellipse 60% 40% at 80% 80%, rgba(250,109,154,0.06) 0%, transparent 60%);
+    pointer-events:none;
+  }
+  .container { position:relative; z-index:1; max-width:900px; margin:0 auto; padding:20px; }
+  header { text-align:center; padding:40px 0 30px; }
+  header h1 { font-family:'Syne',sans-serif; font-size:clamp(2rem,5vw,3.2rem); font-weight:800; letter-spacing:-0.03em;
+    background:linear-gradient(135deg, #fff 0%, var(--accent) 50%, var(--accent2) 100%);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  header p { color:var(--muted); font-size:0.95rem; margin-top:8px; font-family:'DM Mono',monospace; }
+  .tabs { display:flex; gap:4px; background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:5px; margin-bottom:28px; }
+  .tab { flex:1; padding:10px 8px; border:none; background:transparent; color:var(--muted); font-family:'Syne',sans-serif; font-size:0.8rem; font-weight:600; cursor:pointer; border-radius:10px; transition:all 0.2s; text-transform:uppercase; letter-spacing:0.05em; }
+  .tab.active { background:var(--accent); color:#fff; box-shadow:0 0 20px rgba(124,109,250,0.4); }
+  .tab:hover:not(.active) { color:var(--text); background:var(--border); }
+  .panel { display:none; animation:fadeIn 0.3s ease; }
+  .panel.active { display:block; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+  .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .form-full { grid-column:1/-1; }
+  label { display:block; font-size:0.78rem; font-family:'DM Mono',monospace; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.05em; }
+  input, textarea, select { width:100%; background:var(--surface); border:1px solid var(--border); border-radius:10px; color:var(--text); font-family:'DM Sans',sans-serif; font-size:0.92rem; padding:11px 14px; outline:none; transition:border-color 0.2s, box-shadow 0.2s; }
+  input:focus, textarea:focus, select:focus { border-color:var(--accent); box-shadow:0 0 0 3px var(--glow); }
+  textarea { resize:vertical; min-height:90px; }
+  select { cursor:pointer; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:24px; margin-bottom:18px; }
+  .card-title { font-family:'Syne',sans-serif; font-size:1rem; font-weight:700; margin-bottom:16px; display:flex; align-items:center; gap:8px; }
+  .card-title span { width:8px; height:8px; border-radius:50%; background:var(--accent); display:inline-block; }
+  .btn { display:inline-flex; align-items:center; gap:8px; padding:12px 24px; border:none; border-radius:10px; font-family:'Syne',sans-serif; font-weight:700; font-size:0.88rem; cursor:pointer; transition:all 0.2s; letter-spacing:0.03em; text-transform:uppercase; }
+  .btn-primary { background:var(--accent); color:#fff; box-shadow:0 4px 20px rgba(124,109,250,0.3); }
+  .btn-primary:hover { transform:translateY(-1px); box-shadow:0 6px 28px rgba(124,109,250,0.5); }
+  .btn-secondary { background:var(--surface); color:var(--text); border:1px solid var(--border); }
+  .btn-secondary:hover { border-color:var(--accent); color:var(--accent); }
+  .btn:disabled { opacity:0.5; cursor:not-allowed; transform:none !important; }
+  .btn-row { display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; }
+  .output-box { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px; margin-top:18px; font-family:'DM Mono',monospace; font-size:0.85rem; line-height:1.7; color:var(--text); white-space:pre-wrap; word-break:break-word; max-height:520px; overflow-y:auto; display:none; }
+  .output-box.visible { display:block; animation:fadeIn 0.3s; }
+  .output-box::-webkit-scrollbar { width:6px; }
+  .output-box::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+  .loading { display:none; align-items:center; gap:10px; color:var(--muted); font-family:'DM Mono',monospace; font-size:0.85rem; margin-top:14px; }
+  .loading.visible { display:flex; }
+  .dots span { animation:blink 1.2s infinite; }
+  .dots span:nth-child(2){animation-delay:0.2s} .dots span:nth-child(3){animation-delay:0.4s}
+  @keyframes blink { 0%,80%,100%{opacity:0} 40%{opacity:1} }
+  .pulse { width:10px; height:10px; background:var(--accent); border-radius:50%; animation:pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.4);opacity:0.6} }
+  .chat-area { display:flex; flex-direction:column; gap:12px; margin-bottom:14px; max-height:380px; overflow-y:auto; padding-right:4px; }
+  .chat-area::-webkit-scrollbar { width:4px; }
+  .chat-area::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+  .bubble { padding:14px 18px; border-radius:14px; max-width:88%; font-size:0.9rem; line-height:1.6; }
+  .bubble.ai { background:var(--card); border:1px solid var(--border); border-top-left-radius:4px; align-self:flex-start; }
+  .bubble.ai .who { font-family:'DM Mono',monospace; font-size:0.7rem; color:var(--accent); margin-bottom:6px; }
+  .bubble.user { background:var(--accent); color:#fff; border-bottom-right-radius:4px; align-self:flex-end; }
+  .chat-input-row { display:flex; gap:10px; }
+  .chat-input-row input { flex:1; }
+  .badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:0.72rem; font-family:'DM Mono',monospace; font-weight:500; }
+  .badge-purple { background:rgba(124,109,250,0.15); color:var(--accent); border:1px solid rgba(124,109,250,0.3); }
+  .divider { height:1px; background:var(--border); margin:20px 0; }
+  @media(max-width:600px) { .form-grid{grid-template-columns:1fr} .tabs{flex-direction:column} }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>⚡ Career AI Agent</h1>
+    <p>// resume · interview · roadmap — powered by claude ai</p>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('resume',this)">📄 Resume Builder</button>
+    <button class="tab" onclick="switchTab('interview',this)">🎤 Interview Bot</button>
+    <button class="tab" onclick="switchTab('roadmap',this)">🗺️ Skill Roadmap</button>
+  </div>
+
+  <!-- RESUME BUILDER -->
+  <div id="panel-resume" class="panel active">
+    <div class="card">
+      <div class="card-title"><span></span> Personal Info</div>
+      <div class="form-grid">
+        <div><label>Full Name</label><input id="r-name" placeholder="Jane Smith" /></div>
+        <div><label>Job Title / Role</label><input id="r-title" placeholder="Senior Frontend Developer" /></div>
+        <div><label>Email</label><input id="r-email" placeholder="jane@email.com" /></div>
+        <div><label>Phone</label><input id="r-phone" placeholder="+1 555 000 0000" /></div>
+        <div class="form-full"><label>Location</label><input id="r-location" placeholder="San Francisco, CA" /></div>
+        <div class="form-full"><label>LinkedIn / Portfolio URL</label><input id="r-links" placeholder="linkedin.com/in/janesmith" /></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span></span> Professional Details</div>
+      <div class="form-grid">
+        <div class="form-full"><label>Summary (or leave blank to auto-generate)</label>
+          <textarea id="r-summary" placeholder="Passionate developer with 5+ years experience..."></textarea></div>
+        <div class="form-full"><label>Work Experience</label>
+          <textarea id="r-experience" placeholder="Google — SWE — 2021-2024&#10;• Built scalable APIs serving 10M users&#10;&#10;Startup X — Frontend Dev — 2019-2021&#10;• Led React migration..."></textarea></div>
+        <div class="form-full"><label>Education</label>
+          <textarea id="r-education" placeholder="BSc Computer Science — MIT — 2019"></textarea></div>
+        <div class="form-full"><label>Skills (comma separated)</label>
+          <input id="r-skills" placeholder="React, TypeScript, Node.js, AWS, Python, SQL" /></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="buildResume()">✨ Generate Resume</button>
+        <button class="btn btn-secondary" onclick="copyOutput('r-output')">📋 Copy</button>
+      </div>
+      <div class="loading" id="r-loading"><div class="pulse"></div> Crafting your resume<span class="dots"><span>.</span><span>.</span><span>.</span></span></div>
+      <div class="output-box" id="r-output"></div>
+    </div>
+  </div>
+
+  <!-- INTERVIEW BOT -->
+  <div id="panel-interview" class="panel">
+    <div class="card">
+      <div class="card-title"><span></span> Setup Interview Session</div>
+      <div class="form-grid">
+        <div><label>Job Role</label><input id="i-role" placeholder="Product Manager" /></div>
+        <div><label>Interview Type</label>
+          <select id="i-type">
+            <option value="behavioral">Behavioral (STAR method)</option>
+            <option value="technical">Technical</option>
+            <option value="case">Case Study</option>
+            <option value="hr">HR / Culture Fit</option>
+            <option value="mixed">Mixed</option>
+          </select>
+        </div>
+        <div><label>Experience Level</label>
+          <select id="i-level">
+            <option value="junior">Junior (0-2 yrs)</option>
+            <option value="mid">Mid (2-5 yrs)</option>
+            <option value="senior">Senior (5+ yrs)</option>
+            <option value="lead">Lead / Manager</option>
+          </select>
+        </div>
+        <div><label>Company Type</label>
+          <select id="i-company">
+            <option value="startup">Startup</option>
+            <option value="big tech">Big Tech (FAANG)</option>
+            <option value="enterprise">Enterprise / Corp</option>
+            <option value="consulting">Consulting</option>
+          </select>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="startInterview()">🎤 Start Interview</button>
+        <button class="btn btn-secondary" onclick="resetInterview()">↺ Reset</button>
+      </div>
+    </div>
+    <div class="card" id="interview-chat-card" style="display:none">
+      <div class="card-title"><span></span> Live Interview <span class="badge badge-purple" id="q-counter">Q1</span></div>
+      <div class="chat-area" id="chat-area"></div>
+      <div class="loading" id="i-loading"><div class="pulse"></div> Interviewer is thinking<span class="dots"><span>.</span><span>.</span><span>.</span></span></div>
+      <div class="divider"></div>
+      <div class="chat-input-row">
+        <input id="i-answer" placeholder="Type your answer here..." onkeydown="if(event.key==='Enter')sendAnswer()" />
+        <button class="btn btn-primary" onclick="sendAnswer()">Send →</button>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="getFeedback()">📊 Get Full Feedback</button>
+        <button class="btn btn-secondary" onclick="skipQuestion()">⏭ Skip</button>
+      </div>
+      <div class="output-box" id="feedback-output"></div>
+    </div>
+  </div>
+
+  <!-- ROADMAP GENERATOR -->
+  <div id="panel-roadmap" class="panel">
+    <div class="card">
+      <div class="card-title"><span></span> Skill Roadmap Generator</div>
+      <div class="form-grid">
+        <div><label>Target Role / Goal</label><input id="rm-goal" placeholder="Become a Data Scientist" /></div>
+        <div><label>Current Level</label>
+          <select id="rm-level">
+            <option value="complete beginner">Complete Beginner</option>
+            <option value="some knowledge">Some Knowledge</option>
+            <option value="intermediate">Intermediate</option>
+            <option value="advanced">Advanced (pivoting)</option>
+          </select>
+        </div>
+        <div><label>Current Skills</label><input id="rm-current" placeholder="Python basics, Excel, some statistics" /></div>
+        <div><label>Time Per Week</label>
+          <select id="rm-time">
+            <option value="2-3 hours">2-3 hours</option>
+            <option value="5-10 hours">5-10 hours</option>
+            <option value="10-20 hours">10-20 hours</option>
+            <option value="full-time">Full-time (40+ hrs)</option>
+          </select>
+        </div>
+        <div><label>Timeline Goal</label>
+          <select id="rm-timeline">
+            <option value="3 months">3 months</option>
+            <option value="6 months">6 months</option>
+            <option value="1 year">1 year</option>
+            <option value="2 years">2 years</option>
+          </select>
+        </div>
+        <div><label>Learning Style</label>
+          <select id="rm-style">
+            <option value="project-based">Project-based</option>
+            <option value="structured courses">Structured Courses</option>
+            <option value="books and reading">Books & Reading</option>
+            <option value="mixed">Mixed</option>
+          </select>
+        </div>
+        <div class="form-full"><label>Specific Focus Areas (optional)</label>
+          <input id="rm-focus" placeholder="e.g. NLP, computer vision, MLOps" /></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="generateRoadmap()">🗺️ Generate My Roadmap</button>
+        <button class="btn btn-secondary" onclick="copyOutput('rm-output')">📋 Copy</button>
+      </div>
+      <div class="loading" id="rm-loading"><div class="pulse"></div> Building your personalized roadmap<span class="dots"><span>.</span><span>.</span><span>.</span></span></div>
+      <div class="output-box" id="rm-output"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+function switchTab(tab, el) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + tab).classList.add('active');
+  el.classList.add('active');
+}
+
+// ── API call to our Vercel backend proxy ──
+async function callClaude(prompt, systemPrompt) {
+  const response = await fetch("/api/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 1000,
+      system: systemPrompt,
+      messages: [{ role: "user", content: prompt }]
+    })
+  });
+  const data = await response.json();
+  if (data.error) throw new Error(data.error);
+  return data.content?.[0]?.text || "No response received.";
+}
+
+// ── RESUME BUILDER ──
+async function buildResume() {
+  const name = document.getElementById('r-name').value.trim();
+  if (!name) { alert('Please enter your name.'); return; }
+  const fields = {
+    name, title: document.getElementById('r-title').value,
+    email: document.getElementById('r-email').value,
+    phone: document.getElementById('r-phone').value,
+    location: document.getElementById('r-location').value,
+    links: document.getElementById('r-links').value,
+    summary: document.getElementById('r-summary').value,
+    experience: document.getElementById('r-experience').value,
+    education: document.getElementById('r-education').value,
+    skills: document.getElementById('r-skills').value
+  };
+  showLoading('r-loading', true);
+  const output = document.getElementById('r-output');
+  output.classList.remove('visible');
+  try {
+    const result = await callClaude(
+      `Create a professional ATS-optimized resume for:
+Name: ${fields.name} | Title: ${fields.title}
+Email: ${fields.email} | Phone: ${fields.phone}
+Location: ${fields.location} | Links: ${fields.links}
+Summary: ${fields.summary || 'Auto-generate a compelling 3-sentence summary'}
+Experience: ${fields.experience}
+Education: ${fields.education}
+Skills: ${fields.skills}
+
+Format in clean plain text with clear sections using --- as dividers. Make bullet points impactful with metrics.`,
+      "You are an expert resume writer. Create polished, ATS-friendly resumes. Format in clean plain text with: Header, Summary, Experience, Education, Skills sections."
+    );
+    output.textContent = result;
+    output.classList.add('visible');
+  } catch(e) {
+    output.textContent = "Error: " + e.message;
+    output.classList.add('visible');
+  }
+  showLoading('r-loading', false);
+}
+
+// ── INTERVIEW BOT ──
+let interviewHistory = [], questionCount = 0, interviewConfig = {};
+
+async function startInterview() {
+  const role = document.getElementById('i-role').value.trim();
+  if (!role) { alert('Please enter the job role.'); return; }
+  interviewConfig = {
+    role, type: document.getElementById('i-type').value,
+    level: document.getElementById('i-level').value,
+    company: document.getElementById('i-company').value
+  };
+  interviewHistory = []; questionCount = 0;
+  document.getElementById('chat-area').innerHTML = '';
+  document.getElementById('feedback-output').classList.remove('visible');
+  document.getElementById('interview-chat-card').style.display = 'block';
+  showLoading('i-loading', true);
+  try {
+    const firstQ = await callClaude(
+      `Start a ${interviewConfig.type} interview for a ${interviewConfig.level} ${interviewConfig.role} at a ${interviewConfig.company}. Ask only the first question. Be natural. Just the question, no preamble.`,
+      "You are a senior interviewer. Ask one focused question at a time."
+    );
+    addBubble('ai', firstQ);
+    interviewHistory.push({ role:'assistant', content: firstQ });
+    questionCount = 1; updateCounter();
+  } catch(e) { addBubble('ai', 'Error starting interview: ' + e.message); }
+  showLoading('i-loading', false);
+}
+
+async function sendAnswer() {
+  const answerEl = document.getElementById('i-answer');
+  const answer = answerEl.value.trim();
+  if (!answer) return;
+  addBubble('user', answer);
+  interviewHistory.push({ role:'user', content: answer });
+  answerEl.value = '';
+  showLoading('i-loading', true);
+  const historyText = interviewHistory.map(m => `${m.role==='user'?'Candidate':'Interviewer'}: ${m.content}`).join('\n\n');
+  try {
+    const nextMsg = await callClaude(
+      `Interview: ${interviewConfig.level} ${interviewConfig.role} (${interviewConfig.type}) at ${interviewConfig.company}.\n\nConversation:\n${historyText}\n\nGive 1-2 sentence feedback on their answer, then ask question ${questionCount+1}. ${questionCount>=5?'This is the last question, wrap up warmly after.':''}`,
+      "You are a professional interviewer. Give brief feedback then ask next question. Keep under 120 words."
+    );
+    interviewHistory.push({ role:'assistant', content: nextMsg });
+    addBubble('ai', nextMsg);
+    questionCount++; updateCounter();
+  } catch(e) { addBubble('ai', 'Error: ' + e.message); }
+  showLoading('i-loading', false);
+  scrollChat();
+}
+
+async function skipQuestion() {
+  interviewHistory.push({ role:'user', content: '[Skipped]' });
+  addBubble('user', '(Skipped)');
+  showLoading('i-loading', true);
+  try {
+    const nextQ = await callClaude(
+      `Candidate skipped. Ask the next ${interviewConfig.type} question for ${interviewConfig.level} ${interviewConfig.role}. Just the question.`,
+      "You are a professional interviewer."
+    );
+    addBubble('ai', nextQ);
+    interviewHistory.push({ role:'assistant', content: nextQ });
+    questionCount++; updateCounter();
+  } catch(e) { addBubble('ai', 'Error: ' + e.message); }
+  showLoading('i-loading', false);
+}
+
+async function getFeedback() {
+  const output = document.getElementById('feedback-output');
+  output.classList.remove('visible');
+  showLoading('i-loading', true);
+  const historyText = interviewHistory.map(m => `${m.role==='user'?'Candidate':'Interviewer'}: ${m.content}`).join('\n\n');
+  try {
+    const feedback = await callClaude(
+      `Provide full interview feedback:\nRole: ${interviewConfig.level} ${interviewConfig.role} (${interviewConfig.type})\n\n${historyText}\n\nInclude: 1. Score (X/10) 2. Strengths 3. Improvements 4. Per-question feedback 5. Top tips`,
+      "You are a senior career coach. Give honest, specific, actionable feedback."
+    );
+    output.textContent = feedback;
+    output.classList.add('visible');
+  } catch(e) { output.textContent = 'Error: ' + e.message; output.classList.add('visible'); }
+  showLoading('i-loading', false);
+}
+
+function resetInterview() {
+  interviewHistory = []; questionCount = 0;
+  document.getElementById('interview-chat-card').style.display = 'none';
+  document.getElementById('chat-area').innerHTML = '';
+}
+
+function addBubble(who, text) {
+  const area = document.getElementById('chat-area');
+  const div = document.createElement('div');
+  div.className = `bubble ${who}`;
+  if (who==='ai') div.innerHTML = `<div class="who">🤖 Interviewer</div>${text}`;
+  else div.textContent = text;
+  area.appendChild(div);
+  scrollChat();
+}
+function scrollChat() { const a = document.getElementById('chat-area'); a.scrollTop = a.scrollHeight; }
+function updateCounter() { document.getElementById('q-counter').textContent = `Q${questionCount}`; }
+
+// ── ROADMAP GENERATOR ──
+async function generateRoadmap() {
+  const goal = document.getElementById('rm-goal').value.trim();
+  if (!goal) { alert('Please enter your goal.'); return; }
+  showLoading('rm-loading', true);
+  const output = document.getElementById('rm-output');
+  output.classList.remove('visible');
+  try {
+    const result = await callClaude(
+      `Create a detailed skill roadmap:
+Goal: ${goal}
+Current Level: ${document.getElementById('rm-level').value}
+Current Skills: ${document.getElementById('rm-current').value || 'None'}
+Time Available: ${document.getElementById('rm-time').value}/week
+Timeline: ${document.getElementById('rm-timeline').value}
+Learning Style: ${document.getElementById('rm-style').value}
+Focus: ${document.getElementById('rm-focus').value || 'General'}
+
+Structure as PHASE 1, PHASE 2, etc. Each phase: skills, real resources (Coursera/YouTube/books), projects to build, milestones, time estimate.
+End with: Top 3 career tips and pitfalls to avoid.`,
+      "You are a world-class career mentor. Create detailed, actionable roadmaps with real, specific resources. Format clearly with phases and bullet points."
+    );
+    output.textContent = result;
+    output.classList.add('visible');
+  } catch(e) {
+    output.textContent = "Error: " + e.message;
+    output.classList.add('visible');
+  }
+  showLoading('rm-loading', false);
+}
+
+// ── UTILS ──
+function showLoading(id, show) { document.getElementById(id).classList.toggle('visible', show); }
+function copyOutput(id) {
+  const text = document.getElementById(id).textContent;
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => alert('Copied!'));
+}
+</script>
+</body>
+</html>

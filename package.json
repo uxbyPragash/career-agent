@@ -1,0 +1,15 @@
+{
+  "name": "career-agent",
+  "version": "1.0.0",
+  "description": "AI Career Agent - Resume Builder, Interview Bot & Skill Roadmap Generator",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "vercel dev"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "engines": {
+    "node": "18.x"
+  }
+}
